@@ -1,0 +1,314 @@
+---
+title: "Written Assignment 07"
+author: "Simone Mayers"
+date: today
+date-format: long
+number-sections: true
+number-depth: 3
+fig-cap-location: margin
+format:
+  html:
+    toc: true
+    toc-location: right
+    number-sections: true
+    number-depth: 3
+    html-math-method: katex
+    embed-resources: true
+    self-contained: true
+# bibliography: dasc-6000.bib 
+# csl: ieee-with-url.csl
+# linkcolor: red
+# urlcolor: blue
+# link-citations: yes
+# header-includes:
+#   - \usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+# Assignment Goal {.unnumbered}
+
+The overarching goal for this assignment is to assess your understanding of the error-based machine learning algorithms. 
+
+# Instructions {.unnumbered}
+
+There are three questions. Each question carries 33 points.
+
+Please show all your work. Simply providing the final answer is treated as no response. If you do not use R or Python notebooks, it is fine. However, the document structure should be preserved if you choose to use Microsoft Word or something else.
+
+Please submit your response either as a self-contained HTML or PDF document.
+
+# Multivariate Linear Regression Model
+
+A multivariate linear regression model has been built to predict the heating load in a residential building based on a set of descriptive features describing the characteristics of the building. Heating load is the amount of heat energy required to keep a building at a specified temperature, usually 65 degrees Fahrenheit, during the winter regardless of outside temperature. The descriptive features used are the overall surface area of the building, the height of the building, the area of the building’s roof, and the percentage of wall area in the building that is glazed. This kind of model would be useful to architects or engineers when designing a new building. The trained model is:
+
+$$
+\begin{split}
+\text{Heating Load} &= \text{-26.030 + 0.0497} \cdot \text{Surface Area}  \\
+& + \text{4.942} \times \text{Height - 0.090} \times \text{Roof Area} + \text{20.523} \times \text{Glazing Area}
+\end{split}
+$$
+
+Use this model to make predictions for each of the query instances shown in the table below.
+
+```{r}
+#| echo: false
+library(readr)
+df1 <- readr::read_csv("./heating-load.csv", col_names = TRUE)
+```
+
+
+```{r}
+#| echo: false
+#| tbl-cap-location: margin
+knitr::kable(df1, caption = 'Data for a predicting heating load in residential buildings.', align = "lrrrr")
+```
+
+
+```{r}
+# Define the data frame with query instances
+df1 <- data.frame(
+  ID = 1:4,
+  Surface_Area = c(784.0, 710.5, 563.5, 637.0),
+  Height = c(3.5, 3.0, 7.0, 6.0),
+  Roof_Area = c(220.5, 210.5, 122.5, 147.0),
+  Glazing_Area = c(0.25, 0.10, 0.40, 0.60)
+)
+
+# Compute Heating Load using the regression formula
+df1$Heating_Load <- -26.030 +
+  0.0497 * df1$Surface_Area +
+  4.942 * df1$Height -
+  0.090 * df1$Roof_Area +
+  20.523 * df1$Glazing_Area
+
+# Display the results
+print(df1)
+
+# Use knitr::kable for a clean table output
+library(knitr)
+knitr::kable(df1, caption = "Predicted Heating Load for Residential Buildings")
+
+
+```
+
+
+# Another Multivariate Linear Regression Model
+
+You are asked to build a model that predicts the amount of oxygen that an astronaut consumes when performing five minutes of intense physical work. The descriptive features for the model will be the age of the astronaut and their average heart rate throughout the work. The regression model is:
+
+$$
+\begin{align*}
+\text{Oxycon} &= \text{w[0] + w[1]} \cdot \text{Age + w[2]} \cdot \text{Heart Rate} \\ 
+\end{align*}
+$$
+The table below shows a historical dataset that has been collected for this task.
+
+
+```{r}
+#| echo: false
+library(readr)
+df2 <- readr::read_csv("./oxygen-consumption.csv", col_names = TRUE)
+```
+
+
+```{r}
+#| echo: false
+#| tbl-cap-location: margin
+knitr::kable(df2, caption = 'Dataset for a predicting the amount of oxygen that an astronaut consumes when performing five minutes of intense physical work.', align = "lrrrr")
+```
+
+(a) Assuming that the current weights in a multivariate linear regression model are w[0]= -59.50, w[1] = -0.15, and w[2] = 0.60, make a prediction for each training instance using this model.
+    ```{r}
+    # Load necessary libraries
+    library(readr)
+    library(dplyr)
+    library(knitr)
+    
+    # Define the weights
+    w0 <- -59.50
+    w1 <- -0.15
+    w2 <- 0.60
+    
+    # Compute Oxycon using correct column names
+    df2 <- df2 %>%
+      mutate(Oxycon_Predicted = w0 + w1 * Age + w2 * `Heart Rate`) # Use backticks for `Heart Rate`
+    
+    # Display the updated dataset with predictions
+    knitr::kable(df2, caption = "Predictions for Oxygen Consumption Using the Given Regression Model", align = "lrrr")
+    
+    ```
+
+(b) Calculate the sum of squared errors for the set of predictions generated in part (a).
+
+    ```{r}
+    # Calculate the squared errors
+    df2 <- df2 %>%
+      mutate(Squared_Error = (Oxycon - Oxycon_Predicted)^2)
+    
+    # Compute the sum of squared errors
+    SSE <- sum(df2$Squared_Error)
+    
+    # Display the results
+    cat("Sum of Squared Errors (SSE):", SSE, "\n")
+    
+    # Display the table with squared errors
+    knitr::kable(df2, caption = "Oxygen Consumption Predictions with Squared Errors", align = "lrrrr")
+
+    ```
+
+(c) Assuming a learning rate of 0.000002, calculate the weights at the next iteration of the gradient descent algorithm.
+
+    ```{r}
+    # Define the learning rate
+    learning_rate <- 0.000002
+
+    # Calculate the residuals (Oxycon_actual - Oxycon_predicted)
+    df2 <- df2 %>%
+      mutate(Residual = Oxycon - Oxycon_Predicted)
+    
+    # Compute the partial derivatives
+    partial_w0 <- -2 * sum(df2$Residual)
+    partial_w1 <- -2 * sum(df2$Residual * df2$Age)
+    partial_w2 <- -2 * sum(df2$Residual * df2$`Heart Rate`)
+    
+    # Define the old weights
+    w0_old <- -59.50
+    w1_old <- -0.15
+    w2_old <- 0.60
+    
+    # Update the weights
+    w0_new <- w0_old - learning_rate * partial_w0
+    w1_new <- w1_old - learning_rate * partial_w1
+    w2_new <- w2_old - learning_rate * partial_w2
+    
+    # Display the new weights
+    cat("Updated Weights:\n")
+    cat("w0:", w0_new, "\n")
+    cat("w1:", w1_new, "\n")
+    cat("w2:", w2_new, "\n")
+
+    ```
+
+(d) Calculate the sum of squared errors for a set of predictions generated using the new set of weights calculated in part (c).
+
+    ```{r}
+    # Use the updated weights from 2c
+    df2 <- df2 %>%
+      mutate(
+        Oxycon_Predicted_New = w0_new + w1_new * Age + w2_new * `Heart Rate`,
+        Squared_Error_New = (Oxycon - Oxycon_Predicted_New)^2
+      )
+    
+    # Compute the new SSE
+    SSE_new <- sum(df2$Squared_Error_New)
+    
+    # Display the new SSE
+    cat("New Sum of Squared Errors (SSE):", SSE_new, "\n")
+    
+    # Display the table with new predictions and squared errors
+    knitr::kable(df2, caption = "Updated Oxygen Consumption Predictions with New Squared Errors", align = "lrrrrr")
+
+    ```
+
+
+# Logistic Regression Model
+
+The effects that can occur when different drugs are taken together can be difficult for doctors to predict. Machine learning models can be built to help predict optimal dosages of drugs so as to achieve a medical practitioner’s goals.26 In the following figure, the image on the left shows a scatter plot of a dataset used to train a model to distinguish between dosages of two drugs that cause a dangerous interaction and those that cause a safe interaction. There are just two continuous features in this dataset, DOSE1 and DOSE2 (both normalized to the range $(-1,1)$ using range normalization), and two target levels, *dangerous* and *safe*. In the scatter plot, DOSE1 is shown on the horizontal axis, DOSE2 is shown on the vertical axis, and the shapes of the points represent the target level—crosses represent *dangerous* interactions and triangles represent *safe* interactions.
+
+![A scatter plot of drug interactions.](./drug-interactions.png)
+
+In the preceding figure, the image on the right shows a simple linear logistic regression model trained to perform this task. This model is:
+
+P(TYPE = dangerous) =  *Logistic*(0.6168 + 2.7320 $\times$ DOSE1 + 2.4809 $\times$ DOSE2)
+
+
+Plainly, this model is not performing well.
+
+
+(a) Would the similarity-based, information-based, or probability-based predictive modeling approaches already covered in this book be likely to do a better job of learning this model than the simple linear regression model?
+
+    Looking at the scatter plot, it’s clear that the data has a non-linear relationship between the two features, \( \text{DOSE1} \) and \( \text{DOSE2} \), and the target classes (*dangerous* vs. *safe*). The linear logistic regression model’s decision boundary just doesn’t work well here—it’s too simple for the complexity of the data. The points aren’t linearly separable, and that’s why the model struggles to make accurate predictions.
+    If I were to suggest a better approach, I’d start with similarity-based models like k-Nearest Neighbors (k-NN). These methods work really well with non-linear data because they rely on proximity rather than assuming a specific decision boundary. The downside is that they can be slow with larger datasets, but for a dataset like this, k-NN would likely do a much better job than the current model.
+    Another strong option would be decision trees. They split the data into chunks based on feature thresholds, which makes them excellent for handling non-linear relationships. Plus, they’re super easy to interpret, and we’d get a better sense of how \( \text{DOSE1} \) and \( \text{DOSE2} \) contribute to the predictions. That said, decision trees can sometimes overfit, so we’d need to watch out for that.
+    As for logistic regression, it’s just not cut out for this dataset in its current form because it assumes a linear boundary. However, if we introduced basis functions—like adding polynomial terms—it could handle the non-linear patterns a lot better. So, while logistic regression could be improved, I’d still lean toward k-NN or decision trees as the more natural fits for this task.
+
+
+    
+(b) A simple approach to adapting a logistic regression model to learn this type of decision boundary is to introduce a set of basis functions that will allow a non-linear decision boundary to be learned. In this case, a set of basis functions that generate a cubic decision boundary will work well. An appropriate set of basis functions is as follows:
+
+$$
+\begin{aligned}
+& \phi_0(\langle\text { DOSE1 }, \text { DOSE2 } \rangle)=1 \quad \phi_1(\langle\text { DOSE1 }, \text {DOSE2 } \rangle)=\text { DOSE1 }  \\
+& \phi_2(\langle\text { DOSE1 }, \text { DOSE2 } \rangle)=\text { DOSE2 } \quad \phi_3(\langle\text { DOSE1 }, \text { DOSE2 } \rangle) = \text { DOSE1}^2 \\
+& \phi_4(\langle\text { DOSE1 }, \text { DOSE2 } \rangle)=\operatorname{DOSE2}^2 \quad \phi_5(\langle\text { DOSE1 }, \text { DOSE2 } \rangle)=\operatorname{DOSE1}^3 \\
+& \phi_6(\langle\text { DOSE1 }, \text { DOSE2 } \rangle)=\operatorname{DOSE2}^3 \quad \phi_7(\langle\text { DOSE1 }, \text { DOSE2 } \rangle)=\text { DOSE1 } \times \text { DOSE2 } \\
+&
+\end{aligned}
+$$
+
+
+Training a logistic regression model using this set of basis functions leads to the following model:
+
+$$
+\begin{aligned}
+& P(\text { TYPE }=\text { dangerous })= \\
+& \operatorname{Logistic}\left(-0.848 \times \phi_0(\langle\text { DOSE1, DOSE2} \rangle)+1.545 \times \phi_1(\langle\text { DOSE1, DOSE2} \rangle)\right. \\
+& -1.942 \times \phi_2(\langle\text { DOSE1, DOSE2} \rangle)+1.973 \times \phi_3(\langle\text { DOSE1}, \text { DOSE2 }\rangle) \\
+& +2.495 \times \phi_4(\langle\text { DOSE1}, \text { DOSE2} \rangle)+0.104 \times \phi_5(\langle\text { DOSE1, DOSE2} \rangle) \\
+& \left.+0.095 \times \phi_6(\langle\text { DOSE1}, \text { DOSE2} \rangle)+3.009 \times \phi_7(\langle\text { DOSE1, DOSE} 2\rangle)\right) \\
+&
+\end{aligned}
+$$
+
+Use this model to make predictions for the following query instances:
+
+```{r}
+#| echo: false
+library(readr)
+df3 <- readr::read_csv("./dose.csv", col_names = TRUE)
+```
+
+
+```{r}
+#| echo: false
+#| tbl-cap-location: margin
+knitr::kable(df3, caption = 'Prediction queries.', align = "lrrrr")
+```
+
+```{r}
+
+# Define the weights from the logistic regression model
+weights <- c(-0.848, 1.545, -1.942, 1.973, 2.495, 0.104, 0.095, 3.009)
+
+# Calculate basis functions and probabilities
+df3 <- df3 %>%
+  mutate(
+    phi_0 = 1,                          
+    phi_1 = DOSE1,
+    phi_2 = DOSE2,
+    phi_3 = DOSE1^2,
+    phi_4 = DOSE2^2,
+    phi_5 = DOSE1^3,
+    phi_6 = DOSE2^3,
+    phi_7 = DOSE1 * DOSE2,
+    z = weights[1] * phi_0 +          
+        weights[2] * phi_1 +
+        weights[3] * phi_2 +
+        weights[4] * phi_3 +
+        weights[5] * phi_4 +
+        weights[6] * phi_5 +
+        weights[7] * phi_6 +
+        weights[8] * phi_7,
+    Probability = 1 / (1 + exp(-z))     # Logistic function
+  )
+
+# Display the results
+knitr::kable(df3[, c("ID", "DOSE1", "DOSE2", "Probability")], 
+             caption = 'Predicted probabilities for dangerous drug interactions.', align = "lrrr")
+
+```
+
+
